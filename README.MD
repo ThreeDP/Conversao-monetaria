@@ -39,3 +39,9 @@
 ```
 make 
 ```
+
+> Reconstrução do executavel.
+
+```
+make re
+```
