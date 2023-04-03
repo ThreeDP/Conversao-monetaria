@@ -4,98 +4,56 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
 )
 
-type SketchStoreData struct {
-	convertedCurrency map[string]float64
-	storeDataCurrency []string
-}
-
-func (e *SketchStoreData) ConvertCurrencies(inValue string) float64 {
-	convertedCurrency := e.convertedCurrency[inValue]
-	return convertedCurrency
-}
-
-func (e *SketchStoreData) StoreDataCurrency(inValue string) {
-	e.storeDataCurrency = append(e.storeDataCurrency, inValue)
-}
-
-func TestConvertCurrencies(t *testing.T)  {
-
-	storage := SketchStoreData{
-		map[string]float64 {
-			"10": 45.0,
-			"15": 67.5,
-		},
-		nil,
-	}
-
-	server := &CurrencyServer{&storage}
-	t.Run("Returns the conversion of R$ 10 to dollars", func (t *testing.T) {
-		request := newRequestConvertCurries("10")
+func TestConvertCurrency(t *testing.T) {
+	s := &CurrencyServer{}
+	t.Run("Convert 10 BRL to USD using rate of 4.50", func(t *testing.T) {
+		request := newRequestConvert("10", "BRL", "USD", "4.50")
 		response := httptest.NewRecorder()
-
-		server.ServeHTTP(response, request)
-
-		checkBodyrequest(t, fmt.Sprintf("%.2f", 45.0), response.Body.String())
-		checkResponseCode(t, http.StatusOK, response.Code)
+		s.ServeHTTP(response, request)
+		checkReturnValue(t, response.Body.String(), fmt.Sprintf("%v", ResponseData{45, "$"}))
 	})
 
-	t.Run("Returns the conversion of R$ 15 to dollars", func (t *testing.T) {
-		request := newRequestConvertCurries("15")
+	t.Run("Convert 15 BRL to USD using rate of 4.50", func(t *testing.T) {
+		request := newRequestConvert("15", "BRL", "USD", "4.50")
 		response := httptest.NewRecorder()
-
-		server.ServeHTTP(response, request)
-
-		checkBodyrequest(t, fmt.Sprintf("%.2f", 67.5), response.Body.String())
-		checkResponseCode(t, http.StatusOK, response.Code)
+		s.ServeHTTP(response, request)
+		checkReturnValue(t, response.Body.String(), fmt.Sprintf("%v", ResponseData{67.50, "$"}))
 	})
 
-	t.Run("Returns 404 if the currency is not found", func(t *testing.T) {
-		request := newRequestConvertCurries("13")
+	t.Run("Convert 10 BRL to EUR using rate of 6.50", func(t *testing.T) {
+		request := newRequestConvert("10", "BRL", "EUR", "6.50")
 		response := httptest.NewRecorder()
+		s.ServeHTTP(response, request)
+		checkReturnValue(t, response.Body.String(), fmt.Sprintf("%v", ResponseData{65.00, "€"}))
+	})
 
-		server.ServeHTTP(response, request)
-
-		checkResponseCode(t, http.StatusNotFound, response.Code)
+	t.Run("Convert 10 BRL to EUR without rate", func(t *testing.T) {
+		request := newRequestConvert("10", "BRL", "EUR", "")
+		response := httptest.NewRecorder()
+		s.ServeHTTP(response, request)
+		//checkParamsError(t, ErrorMissParams, err)
 	})
 }
 
-func TestStoreData (t *testing.T) {
-	store := SketchStoreData {
-		map[string]float64{},
-		nil,
-	}
-	server := &CurrencyServer{&store}
-	t.Run("returns stats 'accept' for calls with method POST", func(t *testing.T) {
-		request, _ := http.NewRequest(http.MethodPost, "/exchange/11", nil)
-		response := httptest.NewRecorder()
-
-		server.ServeHTTP(response, request)
-
-		checkResponseCode(t, response.Code, http.StatusAccepted)
-		if len(store.storeDataCurrency) != 1 {
-			t.Errorf("expected %d, result %d", 1, len(store.storeDataCurrency))
-		}
-	})
-}
-
-func newRequestConvertCurries(inValue string) *http.Request {
-	request, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("exchange/%s/BRL/USD/4.50", inValue), nil)
+func newRequestConvert(inValue, inCurrency, outCurrency, rate string) *http.Request {
+	request, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("/exchange/%s/%s/%s/%s", inValue, inCurrency, outCurrency, rate), nil)
 	return request
 }
 
-func checkBodyrequest(t *testing.T, expected, result string) {
+func checkParamsError(t *testing.T, expected, err error) {
 	t.Helper()
-	if result != expected {
-		t.Errorf("expected '%s', result '%s'", expected, result)
+	if err == nil {
+		t.Errorf("expected error: %s", expected)
 	}
 }
 
-func checkResponseCode(t *testing.T, expected, result int) {
+func checkReturnValue(t *testing.T, result, expected string) {
 	t.Helper()
-	if expected != result {
-		t.Errorf("expected %d, result %d", expected, result)
+	if !reflect.DeepEqual(expected, result) {
+		t.Errorf("expected %v, result %v", expected, result )
 	}
 }
