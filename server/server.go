@@ -1,7 +1,7 @@
 package server
 
 import (
-	"fmt"
+	"encoding/json"
 	"net/http"
 	"strings"
 )
@@ -48,13 +48,13 @@ func (p *Params) ValidParams(path string) error {
 
 /* ResponseData */
 type ResponseData struct {
-	value float64 
-	symbol string
+	Value float64 `json:"valorConvertido"`
+	Symbol string `json:"simboloMoeda"`
 }
 
 func (r *ResponseData) SetData(outValue float64, sign string) {
-	r.value = outValue
-	r.symbol = sign
+	r.Value = outValue
+	r.Symbol = sign
 }
 
 func (r *ResponseData) ResponseAction(p Params) ResponseData {
@@ -100,5 +100,11 @@ func (s *CurrencyServer) handleConvert(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	fmt.Fprint(w, s.store.ResponseAction(p))
+	jsonResp, err := json.Marshal(s.store.ResponseAction(p))
+	if err != nil {
+		http.Error(w, "Server Error", http.StatusInternalServerError)
+        return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonResp)
 }

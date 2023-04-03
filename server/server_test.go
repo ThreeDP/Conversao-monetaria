@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"reflect"
 	"testing"
+	"encoding/json"
 )
 
 func TestConvertCurrency(t *testing.T) {
@@ -15,21 +16,24 @@ func TestConvertCurrency(t *testing.T) {
 		request := newRequestConvert("10", "BRL", "USD", "4.50")
 		response := httptest.NewRecorder()
 		s.ServeHTTP(response, request)
-		checkReturnValue(t, response.Body.String(), fmt.Sprintf("%v", ResponseData{45, "$"}))
+		jsonResp, _ := json.Marshal(ResponseData{45, "$"})
+		checkReturnValue(t, response.Body.String(), fmt.Sprintf("%v", string(jsonResp)))
 	})
 
 	t.Run("Convert 15 BRL to USD using rate of 4.50", func(t *testing.T) {
 		request := newRequestConvert("15", "BRL", "USD", "4.50")
 		response := httptest.NewRecorder()
 		s.ServeHTTP(response, request)
-		checkReturnValue(t, response.Body.String(), fmt.Sprintf("%v", ResponseData{67.50, "$"}))
+		jsonResp, _ := json.Marshal(ResponseData{67.50, "$"})
+		checkReturnValue(t, response.Body.String(), fmt.Sprintf("%v", string(jsonResp)))
 	})
 
 	t.Run("Convert 10 BRL to EUR using rate of 6.50", func(t *testing.T) {
 		request := newRequestConvert("10", "BRL", "EUR", "6.50")
 		response := httptest.NewRecorder()
 		s.ServeHTTP(response, request)
-		checkReturnValue(t, response.Body.String(), fmt.Sprintf("%v", ResponseData{65.00, "€"}))
+		jsonResp, _ := json.Marshal(ResponseData{65.00, "€"})
+		checkReturnValue(t, response.Body.String(), fmt.Sprintf("%v", string(jsonResp)))
 	})
 
 	t.Run("Convert 10 BRL to EUR without rate", func(t *testing.T) {

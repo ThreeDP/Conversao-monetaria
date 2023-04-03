@@ -9,8 +9,8 @@ import (
 const Port = ":5000"
 
 type MainStore struct {
-	Value float64 
-	Symbol string
+	Value float64  `json:"valorConvertido"`
+	Symbol string `json:"simboloMoeda"`
 }
 
 func (s *MainStore) ResponseAction(p server.Params) server.ResponseData {
