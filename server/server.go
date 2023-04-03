@@ -1,16 +1,9 @@
 package server
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
-)
-
-var (
-	ErrorMissParams = errors.New("parameters were not informed.")
-	ErrorNoNumeric = errors.New("a non-numeric value was passed to a numeric parameter.")
 )
 
 const (
@@ -26,37 +19,13 @@ const (
 	SEUR = "€"
 )
 
-type ResponseData struct {
-	value float64 
-	symbol string
-}
-
+/* Params */
 type Params struct {
 	params []string
 }
 
-type StoreConvertHistory interface {
-	ResponseAction(p Params) ResponseData
-}
-
-type CurrencyServer struct {
-	convertHistory StoreConvertHistory
-}
-
-func (s *CurrencyServer) ResponseAction(p Params) ResponseData {
-	sign := CatSign(p.params[2])
-	outValue := Calculate(p.params[0], p.params[3])
-	return ResponseData{outValue, sign}
-}
-
-func (s *CurrencyServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	p := Params{}
-	err := p.ValidParams(r)
-	if err != nil {
-		return
-	}
-	resp := s.convertHistory.ResponseAction(p)
-	fmt.Fprint(w, resp)
+func (p *Params) GetParams() []string {
+	return p.params
 }
 
 func (p *Params) ValidParams(r *http.Request) error {
@@ -67,25 +36,53 @@ func (p *Params) ValidParams(r *http.Request) error {
 	if !IsAllDigit(p.params[0]) || !IsAllDigit(p.params[3]) {
 		return ErrorNoNumeric
 	}
+	keys := ValidConversion(p.params[1])
+	if keys == nil {
+		return ErrorNotFoundCurrency
+	}
+	if err := ValidExitCurrency(p.params[2], keys); err != nil {
+		return err
+	}
 	return nil
 }
 
-func CatSign(label string) string {
-	switch label {
-	case USD:
-		return SUSD
-	case EUR:
-		return SEUR
-	case BRL:
-		return SBRL
+/* ResponseData */
+type ResponseData struct {
+	value float64 
+	symbol string
+}
+
+func (r *ResponseData) SetData(outValue float64, sign string) {
+	r.value = outValue
+	r.symbol = sign
+}
+
+func (r *ResponseData) ResponseAction(p Params) ResponseData {
+	sign := CatSign(p.params[2])
+	outValue := Calculate(p.params[0], p.params[3])
+	return ResponseData{outValue, sign}
+}
+
+type StoreConvertHistory interface {
+	ResponseAction(p Params) ResponseData
+}
+
+/* Server */
+type CurrencyServer struct {
+	store StoreConvertHistory
+}
+
+func (s *CurrencyServer) SetCurrencyServer(store StoreConvertHistory) {
+	s.store = store
+}
+
+/* Start */
+func (s *CurrencyServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	p := Params{}
+	err := p.ValidParams(r)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
 	}
-	return ""
+	fmt.Fprint(w, s.store.ResponseAction(p))
 }
-
-func Calculate(value, rate string) float64{
-	v, _ := strconv.ParseFloat(value, 64)
-	r, _ := strconv.ParseFloat(rate, 64)
-	return v * r
-}
-
-

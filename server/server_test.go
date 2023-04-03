@@ -9,7 +9,7 @@ import (
 )
 
 func TestConvertCurrency(t *testing.T) {
-	s := &CurrencyServer{}
+	s := &CurrencyServer{&ResponseData{}}
 	t.Run("Convert 10 BRL to USD using rate of 4.50", func(t *testing.T) {
 		request := newRequestConvert("10", "BRL", "USD", "4.50")
 		response := httptest.NewRecorder()
@@ -35,7 +35,21 @@ func TestConvertCurrency(t *testing.T) {
 		request := newRequestConvert("10", "BRL", "EUR", "")
 		response := httptest.NewRecorder()
 		s.ServeHTTP(response, request)
-		//checkParamsError(t, ErrorMissParams, err)
+		checkStatusCode(t, http.StatusNotFound, response.Code)
+	})
+
+	t.Run("Convert 10 GO to EUR without 3.5", func(t *testing.T) {
+		request := newRequestConvert("10", "GO", "EUR", "3.5")
+		response := httptest.NewRecorder()
+		s.ServeHTTP(response, request)
+		checkStatusCode(t, http.StatusNotFound, response.Code)
+	})
+
+	t.Run("Convert 10 BRL to BTC without 3.5", func(t *testing.T) {
+		request := newRequestConvert("10", "BRL", "BTC", "3.5")
+		response := httptest.NewRecorder()
+		s.ServeHTTP(response, request)
+		checkStatusCode(t, http.StatusNotFound, response.Code)
 	})
 }
 
@@ -44,10 +58,10 @@ func newRequestConvert(inValue, inCurrency, outCurrency, rate string) *http.Requ
 	return request
 }
 
-func checkParamsError(t *testing.T, expected, err error) {
+func checkStatusCode(t *testing.T, expected, result int) {
 	t.Helper()
-	if err == nil {
-		t.Errorf("expected error: %s", expected)
+	if expected != result {
+		t.Errorf("expected %d, result %d", expected, result)
 	}
 }
 
