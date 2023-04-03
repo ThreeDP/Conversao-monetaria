@@ -9,7 +9,8 @@ import (
 )
 
 func TestConvertCurrency(t *testing.T) {
-	s := &CurrencyServer{&ResponseData{}}
+	s := NewCurrencyServer(&ResponseData{})
+	
 	t.Run("Convert 10 BRL to USD using rate of 4.50", func(t *testing.T) {
 		request := newRequestConvert("10", "BRL", "USD", "4.50")
 		response := httptest.NewRecorder()
@@ -50,6 +51,17 @@ func TestConvertCurrency(t *testing.T) {
 		response := httptest.NewRecorder()
 		s.ServeHTTP(response, request)
 		checkStatusCode(t, http.StatusNotFound, response.Code)
+	})
+}
+
+func TestConvertLogs(t *testing.T) {
+	s := NewCurrencyServer(&ResponseData{})
+	
+	t.Run("Returns a list of conversions already made", func(t *testing.T) {
+		request, _ := http.NewRequest(http.MethodGet, "/consult", nil)
+		response := httptest.NewRecorder()
+		s.ServeHTTP(response, request)
+		checkStatusCode(t, response.Code, http.StatusOK)
 	})
 }
 

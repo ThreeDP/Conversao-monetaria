@@ -28,8 +28,8 @@ func (p *Params) GetParams() []string {
 	return p.params
 }
 
-func (p *Params) ValidParams(r *http.Request) error {
-	p.params = strings.Split(r.URL.Path[len("/exchange/"):], "/")
+func (p *Params) ValidParams(path string) error {
+	p.params = strings.Split(path, "/")
 	if len(p.params) != 4 {
 		return ErrorMissParams
 	}
@@ -70,16 +70,37 @@ type StoreConvertHistory interface {
 /* Server */
 type CurrencyServer struct {
 	store StoreConvertHistory
+	router *http.ServeMux
 }
 
 func (s *CurrencyServer) SetCurrencyServer(store StoreConvertHistory) {
 	s.store = store
 }
 
+func NewCurrencyServer(store StoreConvertHistory) *CurrencyServer{
+	s := &CurrencyServer {
+		store,
+		http.NewServeMux(),
+	}
+
+	s.router.Handle("/consult", http.HandlerFunc(s.showLogs))
+	s.router.Handle("/exchange/", http.HandlerFunc(s.handleConvert))
+	return s
+}
+
 /* Start */
 func (s *CurrencyServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	s.router.ServeHTTP(w, r)
+}
+
+func (s *CurrencyServer) showLogs(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+}
+
+func (s *CurrencyServer) handleConvert(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Path[len("/exchange/"):]
 	p := Params{}
-	err := p.ValidParams(r)
+	err := p.ValidParams(path)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
