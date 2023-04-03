@@ -70,27 +70,22 @@ type StoreConvertHistory interface {
 /* Server */
 type CurrencyServer struct {
 	store StoreConvertHistory
-	router *http.ServeMux
+	http.Handler
 }
 
 func (s *CurrencyServer) SetCurrencyServer(store StoreConvertHistory) {
 	s.store = store
 }
 
-func NewCurrencyServer(store StoreConvertHistory) *CurrencyServer{
-	s := &CurrencyServer {
-		store,
-		http.NewServeMux(),
-	}
-
-	s.router.Handle("/consult", http.HandlerFunc(s.showLogs))
-	s.router.Handle("/exchange/", http.HandlerFunc(s.handleConvert))
-	return s
-}
-
 /* Start */
-func (s *CurrencyServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	s.router.ServeHTTP(w, r)
+func NewCurrencyServer(store StoreConvertHistory) *CurrencyServer{
+	s := new(CurrencyServer)
+	s.store = store
+	router := http.NewServeMux()
+	router.Handle("/consult", http.HandlerFunc(s.showLogs))
+	router.Handle("/exchange/", http.HandlerFunc(s.handleConvert))
+	s.Handler = router
+	return s
 }
 
 func (s *CurrencyServer) showLogs(w http.ResponseWriter, r *http.Request) {

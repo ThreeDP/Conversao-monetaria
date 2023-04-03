@@ -22,7 +22,7 @@ func (s *MainStore) ResponseAction(p server.Params) server.ResponseData {
 }
 
 func main() {
-	server := &server.CurrencyServer{}
+	server := server.NewCurrencyServer(&MainStore{})
 	server.SetCurrencyServer(&MainStore{})
 	if err := http.ListenAndServe(Port, server); err != nil {
 		log.Fatalf("unable to listen on port %s %v", Port, err)
