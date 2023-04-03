@@ -35,8 +35,12 @@ type Params struct {
 	params []string
 }
 
+type StoreConvertHistory interface {
+	ResponseAction(p Params) ResponseData
+}
+
 type CurrencyServer struct {
-	
+	convertHistory StoreConvertHistory
 }
 
 func (s *CurrencyServer) ResponseAction(p Params) ResponseData {
@@ -51,7 +55,7 @@ func (s *CurrencyServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
-	resp := s.ResponseAction(p)
+	resp := s.convertHistory.ResponseAction(p)
 	fmt.Fprint(w, resp)
 }
 
